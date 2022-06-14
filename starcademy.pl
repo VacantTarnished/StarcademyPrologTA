@@ -1,4 +1,4 @@
-/* Star Academy, by Elias Pühringer, Ali Coban. */
+/* Star Academy, by Elias Pühringer and Ali Coban. */
 
 :- dynamic i_am_at/1, at/2, holding/1.
 :- retractall(at(_, _)), retractall(i_am_at(_)), retractall(alive(_)).
@@ -12,10 +12,15 @@ path(mainhall, n, northcorridor).
 path(mainhall, w, westcorridor).
 path(northcorridor, n, bedchamber).
 path(bedchamber, s, northcorridor).
+path(northcorridor, e, northeastcorridor).
+path(northeastcorridor, w, northcorridor).
+path(northcorridor, w, northwestcorridor).
+path(northwestcorridor, e, northcorridor).
+path(northeastcorridor, s, eastcorridor).
+path(northwestcorridor, s, westcorridor).
 
 
-
-at(thing, mainhall).
+at(sith_holocron, bedchamber).
 
 /* These rules describe how to pick up an object. */
 
@@ -89,6 +94,10 @@ look :-
 /* These rules set up a loop to mention all the objects
    in your vicinity. */
 
+notice_objects_at(bedchamber) :-
+        at(X, bedchamber),
+        write('There is a '), write(X), write(' on your bed'), nl.
+
 notice_objects_at(Place) :-
         at(X, Place),
         write('There is a '), write(X), write(' here.'), nl,
@@ -140,6 +149,42 @@ start :-
 /* These rules describe the various rooms.  Depending on
    circumstances, a room may have more than one description. */
 
-describe(mainhall) :- write('You are in the mainhall of the Sith Academy.'), nl.
-describe(northcorridor) :- write('You are in a long corridor in the north of the academy halls. North of you are the Sith Bedchambers, east at the end of the corridor is [redacted] and in the west is the instructors chamber.'), nl.
-describe(redacted) :- write('As you try to go near [redacted] a force pushes you back to '), write(i_am_at), nl.
+describe(mainhall) :- 
+        write('You are in the mainhall of the Sith Academy.'), nl,
+        write('South is the Exit.'), nl,
+        write('North is the Northcorridor.'), nl,
+        write('East is the Eastcorridor.'), nl,
+        write('West is the Westcorridor.'), nl.
+describe(northcorridor) :- 
+        write('You are in a long corridor in the north of the academy halls.'), nl,
+        write('North of you are the Sith Bedchambers.'), nl,
+        write('East of you is the Northeasterncorridor.'), nl,
+        write('West of you is the Nothwesterncorridor.'), nl,
+        write('South of you is the Mainhall.'), nl.
+describe(northeastcorridor) :- 
+        write('You are in the Northeastcorridor.'), nl,
+        write('South is the Easterncorridor.'), nl,
+        write('North is [Room].'), nl,
+        write('East is [Room].'), nl,
+        write('West is the Northerncorridor.'), nl.
+describe(northwestcorridor) :- 
+        write('You are in the Northwestcorridor.'), nl,
+        write('East is the Northerncorridor.'), nl,
+        write('South is the Westcorridor.'), nl,
+        write('North is [Room].'), nl.
+describe(westcorridor) :- 
+        write('You are in the Westcorridor.'), nl,
+        write('West is [Room].'), nl,
+        write('East is the Mainhall.'), nl,
+        write('North is the Northwestcorridor.'), nl,
+        write('South is [Room].'), nl.
+describe(eastcorridor) :- 
+        write('You are in the Eastcorridor.'), nl,
+        write('East is [Room.]'), nl,
+        write('West is the Mainhall.'), nl,
+        write('North is the Northeastcorridor.'), nl,
+        write('South is [Room].'), nl.
+describe(bedchamber) :- 
+        write('You are in the Sith Bedchambers, here you and your peers sleep.'), nl,
+        write('On the right you see your messy bed.'), nl,
+        write('You can leave by going south.'), nl.
