@@ -1,15 +1,20 @@
 /* Star Academy, by Elias Pühringer and Ali Coban. */
 
-:- dynamic i_am_at/1, at/2, holding/1.
-:- retractall(at(_, _)), retractall(i_am_at(_)), retractall(alive(_)).
+:- dynamic i_am_at/1, at/2, inventory/1.
+:- retractall(at(_, _)), retractall(i_am_at(_)).
 
-i_am_at(mainhall).
+i_am_at(bedchamber).
 
 path(exit, n, mainhall).
 path(mainhall, s, exit).
 path(mainhall, e, eastcorridor).
 path(mainhall, n, northcorridor).
 path(mainhall, w, westcorridor).
+path(eastcorridor, w, mainhall).
+path(westcorridor, e, mainhall).
+path(eastcorridor, n, northeastcorridor).
+path(westcorridor, n, northwestcorridor).
+path(northcorridor, s, mainhall).
 path(northcorridor, n, bedchamber).
 path(bedchamber, s, northcorridor).
 path(northcorridor, e, northeastcorridor).
@@ -18,14 +23,21 @@ path(northcorridor, w, northwestcorridor).
 path(northwestcorridor, e, northcorridor).
 path(northeastcorridor, s, eastcorridor).
 path(northwestcorridor, s, westcorridor).
-
+path(westcorridor, s, instructorroom).
+path(instructorroom, n, westcorridor).
+path(westcorridor, w, trainingroom).
+path(trainingroom, e, westcorridor).
 
 at(sith_holocron, bedchamber).
+
+inv :- 
+        findall(Is_In, inventory(Is_In), Entire),
+        write(Entire), nl.
 
 /* These rules describe how to pick up an object. */
 
 take(X) :-
-        holding(X),
+        inventory(X),
         write('You''re already holding it!'),
         !, nl.
 
@@ -33,7 +45,7 @@ take(X) :-
         i_am_at(Place),
         at(X, Place),
         retract(at(X, Place)),
-        assert(holding(X)),
+        assert(inventory(X)),
         write('OK.'),
         !, nl.
 
@@ -45,15 +57,15 @@ take(_) :-
 /* These rules describe how to put down an object. */
 
 drop(X) :-
-        holding(X),
+        inventory(X),
         i_am_at(Place),
-        retract(holding(X)),
+        retract(inventory(X)),
         assert(at(X, Place)),
         write('OK.'),
         !, nl.
 
 drop(_) :-
-        write('You aren''t holding it!'),
+        write('You aren''t carrying this currently!'),
         nl.
 
 
@@ -96,7 +108,7 @@ look :-
 
 notice_objects_at(bedchamber) :-
         at(X, bedchamber),
-        write('There is a '), write(X), write(' on your bed'), nl.
+        write('There is a '), write(X), write(' on your bed'), nl, !.
 
 notice_objects_at(Place) :-
         at(X, Place),
@@ -136,6 +148,7 @@ instructions :-
         write('look.              -- to look around you again.'), nl,
         write('instructions.      -- to see this message again.'), nl,
         write('halt.              -- to end the game and quit.'), nl,
+        write('inv.               -- to output your inventory'), nl,
         nl.
 
 
@@ -143,7 +156,8 @@ instructions :-
 
 start :-
         instructions,
-        look.
+        write('You wake up in your bed for another day in this accursed Academy.'), nl,
+        write('First things first you should bring the holocron with which you studied back to the library.'), nl.
 
 
 /* These rules describe the various rooms.  Depending on
@@ -188,3 +202,12 @@ describe(bedchamber) :-
         write('You are in the Sith Bedchambers, here you and your peers sleep.'), nl,
         write('On the right you see your messy bed.'), nl,
         write('You can leave by going south.'), nl.
+describe(instructorroom) :-
+        write('You are in the Instructors room, here you can remember all the hard things'), nl, 
+        write('your Instructors put you through.'), nl, 
+        write('Go north to leave this room.'),nl.
+describe(trainingroom) :-
+        write('You are in the Training Quarters.'), nl,
+        write('Here you have been through grueling Training with your Instructors'), nl.
+describe(exit) :-
+        write('In front of you are huge medal doors sealed shut by the sith council'), nl.
