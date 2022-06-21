@@ -1,7 +1,24 @@
-/* Star Academy, by Elias Pühringer and Ali Coban. */
+/* Starcademy, by Elias Pühringer and Ali Coban. */
 
-:- dynamic i_am_at/1, at/2, inventory/1.
-:- retractall(at(_, _)), retractall(i_am_at(_)).
+:- dynamic i_am_at/1, at/2, inventory/1, is_open/1.
+:- retractall(at(_, _)), retractall(i_am_at(_)), retractall(is_open(_)).
+
+map :-
+        write('-------------------------------------------------------------------'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('|'), nl,
+        write('-------------------------------------------------------------------'), nl.
 
 i_am_at(bedchamber).
 
@@ -12,27 +29,73 @@ path(mainhall, n, northcorridor).
 path(mainhall, w, westcorridor).
 path(eastcorridor, w, mainhall).
 path(westcorridor, e, mainhall).
-path(eastcorridor, n, northeastcorridor).
 path(westcorridor, n, northwestcorridor).
 path(northcorridor, s, mainhall).
 path(northcorridor, n, bedchamber).
 path(bedchamber, s, northcorridor).
-path(northcorridor, e, northeastcorridor).
-path(northeastcorridor, w, northcorridor).
 path(northcorridor, w, northwestcorridor).
 path(northwestcorridor, e, northcorridor).
-path(northeastcorridor, s, eastcorridor).
 path(northwestcorridor, s, westcorridor).
-path(westcorridor, s, instructorroom).
-path(instructorroom, n, westcorridor).
-path(westcorridor, w, trainingroom).
-path(trainingroom, e, westcorridor).
+path(westcorridor, s, prison_ward).
+path(prison_ward, n, westcorridor).
+path(northwestcorridor, n, ritual_room).
+path(ritual_room, s, northwestcorridor).
+path(eastcorridor, e, sith_lord_chambers).
+path(sith_lord_chambers, w, eastcorridor).
+path(eastcorridor, s, instructorroom).
+path(instructorroom, n, eastcorridor).
+
+npc(instructor).
+npc(zash).
+npc(warden).
+npc(acolyte).
+
+item(sith_artifact).
+item(sith_holocron).
+item(lightsaber_hilt).
+item(kyber_crystal).
+item(exit_key).
+item(zash_letter).
+item(chamber_key).
 
 at(sith_holocron, bedchamber).
+at(zash, sith_lord_chambers).
+at(warden, prison_ward).
+at(acolyte, bedchamber).
+at(instructor, instructorroom).
+
+has(lightsaber_hilt, acolyte).
+has(chamber_key, instructor).
+has(zash_letter, zash).
+has(kyber_crystal, zash).
+has(sith_artifact, warden).
+has(exit_key, zash).
 
 inv :- 
         findall(Is_In, inventory(Is_In), Entire),
         write(Entire), nl.
+
+talk(X) :-
+        i_am_at(Place),
+        at(X, Place),
+        npc(X),
+        dialogue(X), !.
+
+talk(sith_holocron) :-
+        inventory(sith_holocron),
+        write('The sith holocron whispers dark secrets of the force to you.'), nl, !;
+        i_am_at(Place),
+        at(sith_holocron, Place),
+        write('The sith holocron whispers dark secrets of the force to you.'), nl, !.
+
+talk(X) :-
+        i_am_at(Place),
+        at(X, Place),
+        item(X),
+        write('Why are you trying to talk to an object?'), !.
+
+talk(_) :-
+        write('You don''t see them here.'), nl.
 
 /* These rules describe how to pick up an object. */
 
@@ -43,11 +106,19 @@ take(X) :-
 
 take(X) :-
         i_am_at(Place),
+        item(X),
         at(X, Place),
         retract(at(X, Place)),
         assert(inventory(X)),
         write('OK.'),
         !, nl.
+
+take(X) :-
+        i_am_at(Place),
+        npc(X),
+        at(X, Place),
+        write('As you try grabbing '), write(X), nl, 
+        write('they cut you down with their Lightsaber'), nl, die, nl, !.
 
 take(_) :-
         write('I don''t see it here.'),
@@ -81,6 +152,11 @@ w :- go(w).
 
 
 /* This rule tells how to move in a given direction. */
+go(s) :-
+        i_am_at(exit),
+        inventory(exit_key),
+        finish,
+        !.
 
 go(Direction) :-
         i_am_at(Here),
@@ -88,6 +164,11 @@ go(Direction) :-
         retract(i_am_at(Here)),
         assert(i_am_at(There)),
         !, look.
+
+go(_) :-
+        i_am_at(void),
+        look,
+        !.
 
 go(_) :-
         write('You can''t go that way.').
@@ -99,6 +180,7 @@ look :-
         i_am_at(Place),
         describe(Place),
         nl,
+        notice_npcs_at(Place),
         notice_objects_at(Place),
         nl.
 
@@ -106,12 +188,31 @@ look :-
 /* These rules set up a loop to mention all the objects
    in your vicinity. */
 
+use(altar) :-
+        write('Not Implemented Exception').
+
+use(_) :-
+        write('You can''t use that').
+
+notice_npcs_at(bedchamber) :-
+        write('You can see another acolyte here. Maybe you can talk to them.'), nl, nl, !.
+
+
+notice_npcs_at(Place) :-
+        at(X, Place),
+        npc(X),
+        write('You can see '), write(X), write(' here. Maybe you can talk to them.'), nl, nl, !.
+
+notice_npcs_at(_).
+
 notice_objects_at(bedchamber) :-
         at(X, bedchamber),
+        item(X),
         write('There is a '), write(X), write(' on your bed'), nl, !.
 
 notice_objects_at(Place) :-
         at(X, Place),
+        item(X),
         write('There is a '), write(X), write(' here.'), nl,
         fail.
 
@@ -121,7 +222,11 @@ notice_objects_at(_).
 /* This rule tells how to die. */
 
 die :-
-        finish.
+        write('You just got killed, good job, really not many ways to die in this game.'), nl,
+        write('Now the game is finished enter halt. to end the game.'),
+        retractall(i_am_at(_)),
+        retractall(inventory(_)),
+        assert(i_am_at(void)).
 
 
 /* Under UNIX, the "halt." command quits Prolog but does not
@@ -149,6 +254,9 @@ instructions :-
         write('instructions.      -- to see this message again.'), nl,
         write('halt.              -- to end the game and quit.'), nl,
         write('inv.               -- to output your inventory'), nl,
+        write('talk(NPC).         -- to talk to the npc in the room'), nl,
+        write('use(altar).        -- to use the sith altar in the altar room'), nl,
+        write('map.               -- to show the map of the academy'), nl,
         nl.
 
 
@@ -163,6 +271,67 @@ start :-
 /* These rules describe the various rooms.  Depending on
    circumstances, a room may have more than one description. */
 
+dialogue(zash) :- 
+        inventory(lightsaber_hilt),
+        inventory(kyber_crystal),
+        write('You have got everything you need to construct your lightsaber.'), nl,
+        write('Go into the ritual room to create the lightsaber and come back once you have it'), nl,
+        write('Now create your weapon and we can go to Dromundkas'), nl, !.
+
+dialogue(zash) :-
+        inventory(lightsaber),
+        write('Hello my apprentice everything is in place for us to go to Dromundkas.'), nl,
+        write('Leave the academy and meet me at the spaceship.') , nl, !.
+
+dialogue(zash) :-
+        inventory(lightsaber_hilt),
+        write('Good Job aquiring that lightsaber hilt, now all that remains is a bled kyber crystal for finish.'), nl,
+        write('Here is one for now, later you will make you own.'), nl, nl,
+        write('*Zash gave you a bled kyber crystal*'),
+        assert(inventory(kyber_crystal)),nl,
+        dialogue(zash).
+
+dialogue(acolyte) :-
+        inventory(sith_artifact),
+        write('I see you have quite the interesting artifact on you.'),nl,
+        write('I''d trade you it for a light saber hilt, heard you need one for lord Zash'), nl,
+        write('You interested?'),
+        write('*you trade the artifact for the hilt*'), nl,
+        write('Ight thanks for the trade, was definetly worth it for both of us.'), nl,
+        retract(inventory(sith_artifact)),
+        assert(inventory(lightsaber_hilt)), !.
+
+dialogue(acolyte) :-
+        inventory(lightsaber_hilt),
+        write('It was a good trade now leave me alone to study.'), nl, !.
+
+dialogue(acolyte) :-
+        inventory(lightsaber),
+        write('I see you have gotten your Lightsaber.'), 
+        write('Very nice, now you can leave this horrible place and go to Dromundkas, the capital planet of the sith empire'), nl, !.
+
+dialogue(acolyte) :-
+        write('You don''t interest me leave me alone').
+
+dialogue(warden) :-
+        inventory(zash_letter),
+        write('I see, Lord Zash sent you with an invitational letter.'), nl,
+        write('Alright, I guess I''m gonna have to give you the artifact, here you go.'), nl,
+        write('*The prison warden gives you a interesting looking artifact*'),
+        retract(inventory(zash_letter)),
+        assert(inventory(sith_artifact)), !.
+
+dialogue(warden) :-
+        write('Hey there acolyte, you aren''t allowed here leave immediatly!'), nl.
+
+dialogue(instructor) :-
+        inventory(sith_holocron),
+        write('Ah good you have came! your lessons with the holocron yes?'), nl,
+        write('Then now you are ready to go to Lord Zash here take this key for her chambers.'), nl,
+        write('*Your instructor takes the holocron back and gives you the key to Lord Zash''s chambers*'), nl,
+        retract(inventory(sith_holocron)),
+        assert(inventory(chamber_key)).
+
 describe(mainhall) :- 
         write('You are in the mainhall of the Sith Academy.'), nl,
         write('South is the Exit.'), nl,
@@ -172,32 +341,22 @@ describe(mainhall) :-
 describe(northcorridor) :- 
         write('You are in a long corridor in the north of the academy halls.'), nl,
         write('North of you are the Sith Bedchambers.'), nl,
-        write('East of you is the Northeasterncorridor.'), nl,
         write('West of you is the Nothwesterncorridor.'), nl,
         write('South of you is the Mainhall.'), nl.
-describe(northeastcorridor) :- 
-        write('You are in the Northeastcorridor.'), nl,
-        write('South is the Easterncorridor.'), nl,
-        write('North is [Room].'), nl,
-        write('East is [Room].'), nl,
-        write('West is the Northerncorridor.'), nl.
 describe(northwestcorridor) :- 
         write('You are in the Northwestcorridor.'), nl,
         write('East is the Northerncorridor.'), nl,
         write('South is the Westcorridor.'), nl,
-        write('North is [Room].'), nl.
+        write('North is the Ritual room'), nl.
 describe(westcorridor) :- 
         write('You are in the Westcorridor.'), nl,
-        write('West is [Room].'), nl,
         write('East is the Mainhall.'), nl,
         write('North is the Northwestcorridor.'), nl,
-        write('South is [Room].'), nl.
+        write('South is the Prison Ward.'), nl.
 describe(eastcorridor) :- 
         write('You are in the Eastcorridor.'), nl,
-        write('East is [Room.]'), nl,
-        write('West is the Mainhall.'), nl,
-        write('North is the Northeastcorridor.'), nl,
-        write('South is [Room].'), nl.
+        write('East is Lord Zash chambers'), nl,
+        write('West is the Mainhall.'), nl.
 describe(bedchamber) :- 
         write('You are in the Sith Bedchambers, here you and your peers sleep.'), nl,
         write('On the right you see your messy bed.'), nl,
@@ -206,8 +365,21 @@ describe(instructorroom) :-
         write('You are in the Instructors room, here you can remember all the hard things'), nl, 
         write('your Instructors put you through.'), nl, 
         write('Go north to leave this room.'),nl.
-describe(trainingroom) :-
-        write('You are in the Training Quarters.'), nl,
-        write('Here you have been through grueling Training with your Instructors'), nl.
+describe(sith_lord_chambers) :- 
+        write('You are in Lord Zash''s chambers.'), nl, 
+        write('Here Lord Zash will tell you what to do in order to leave this accursed academy.'), nl.
 describe(exit) :-
-        write('In front of you are huge medal doors sealed shut by the sith council'), nl.
+        inventory(exit_key),
+        write('In front of you are huge open medal doors.'), nl,
+        write('You are now ready to go to Dromundkas'), nl.
+describe(exit) :-
+        write('In front of you are huge medal doors sealed shut by the sith council'), nl, !.
+describe(void) :-
+        write('After death you just find yourself on a endless dark plane.'), nl.
+describe(prison_ward) :-
+        write('You are in the prison ward of the academy.'), nl,
+        write('here all the plunderers and sometimes even jedi get locked in when they are found on korriban'), nl.
+describe(ritual_room) :-
+        write('You currently are in the Ritual Room.'), nl, 
+        write('Here acolytes construct their lightsaber and go to Dromundkas with their masters afterwards.'), nl,
+        write('You can see a huge sith altar at the end of the room.').
