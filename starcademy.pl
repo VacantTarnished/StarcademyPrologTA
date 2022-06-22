@@ -1,23 +1,17 @@
 /* Starcademy, by Elias Pühringer and Ali Coban. */
 
-:- dynamic i_am_at/1, at/2, inventory/1, is_open/1.
-:- retractall(at(_, _)), retractall(i_am_at(_)), retractall(is_open(_)).
+:- dynamic i_am_at/1, at/2, inventory/1, is_open/1. unlocked/1.
+:- retractall(at(_, _)), retractall(i_am_at(_)), retractall(is_open(_)), retractall(unlocked(_)).
 
 map :-
-        write('-------------------------------------------------------------------'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
-        write('|'), nl,
+        write('---------------------------------------------------------------------'), nl,
+        write('| [Ritual Room]    [Bedchambers]                                    |'), nl,
+        write('|     |  |             |  |                                         |'), nl,
+        write('| [NW Corridor] == [N  Corridor]                                    |'), nl,
+        write('|     |  |             |  |                                         |'), nl,
+        write('| [W  Corridor] == [ Mainhall  ] == [E  Corridor] == [Sith Chamber] |'), nl,
+        write('|     |  |             |  |             |  |                        |'), nl,
+        write('| [Prison Ward]    [   Exit    ]    [Instructors]                   |'), nl,
         write('-------------------------------------------------------------------'), nl.
 
 i_am_at(bedchamber).
@@ -45,6 +39,17 @@ path(sith_lord_chambers, w, eastcorridor).
 path(eastcorridor, s, instructorroom).
 path(instructorroom, n, eastcorridor).
 
+unlocked(ritual_room).
+unlocked(northcorridor).
+unlocked(northwestcorridor).
+unlocked(westcorridor).
+unlocked(mainhall).
+unlocked(eastcorridor).
+unlocked(prison_ward).
+unlocked(exit).
+unlocked(instructorroom).
+unlocked(bedchamber).
+
 npc(instructor).
 npc(zash).
 npc(warden).
@@ -63,13 +68,6 @@ at(zash, sith_lord_chambers).
 at(warden, prison_ward).
 at(acolyte, bedchamber).
 at(instructor, instructorroom).
-
-has(lightsaber_hilt, acolyte).
-has(chamber_key, instructor).
-has(zash_letter, zash).
-has(kyber_crystal, zash).
-has(sith_artifact, warden).
-has(exit_key, zash).
 
 inv :- 
         findall(Is_In, inventory(Is_In), Entire),
@@ -161,6 +159,7 @@ go(s) :-
 go(Direction) :-
         i_am_at(Here),
         path(Here, Direction, There),
+        unlocked(There),
         retract(i_am_at(Here)),
         assert(i_am_at(There)),
         !, look.
@@ -189,10 +188,27 @@ look :-
    in your vicinity. */
 
 use(altar) :-
-        write('Not Implemented Exception').
+        i_am_at(ritual_room),
+        inventory(lightsaber_hilt),
+        inventory(kyber_crystal),
+        write('You place your light saber hilt and kyber crystal on top of the altar.'), nl,
+        write('As you start meditating you can feel the force guide you on how to finish constructing the lightsaber.'), nl,
+        write('After a couple of minutes you are finished with a new weapon in hand'), 
+        retract(inventory(lightsaber_hilt)), 
+        retract(inventory(kyber_crystal)), 
+        assert(inventory(lightsaber)), !.
 
 use(_) :-
         write('You can''t use that').
+
+read_l(zash_letter) :-
+        inventory(zash_letter),
+        write('To: Prison Ward'), nl,
+        write('From: Lord Zash'), nl,
+        write('Give the Sith Artifact you found on the last raiders to this apprentice here.'), nl, !.
+
+read_l(_) :-
+        write('You don''t see anything readable here'), nl.
 
 notice_npcs_at(bedchamber) :-
         write('You can see another acolyte here. Maybe you can talk to them.'), nl, nl, !.
@@ -223,7 +239,7 @@ notice_objects_at(_).
 
 die :-
         write('You just got killed, good job, really not many ways to die in this game.'), nl,
-        write('Now the game is finished enter halt. to end the game.'),
+        write('Now the game is finished enter halt. to end the game.'), nl,
         retractall(i_am_at(_)),
         retractall(inventory(_)),
         assert(i_am_at(void)).
@@ -255,7 +271,8 @@ instructions :-
         write('halt.              -- to end the game and quit.'), nl,
         write('inv.               -- to output your inventory'), nl,
         write('talk(NPC).         -- to talk to the npc in the room'), nl,
-        write('use(altar).        -- to use the sith altar in the altar room'), nl,
+        write('use(X).            -- to use a construct'), nl,
+        write('read_l(X).           -- to read out text on a item'), nl,
         write('map.               -- to show the map of the academy'), nl,
         nl.
 
@@ -281,7 +298,8 @@ dialogue(zash) :-
 dialogue(zash) :-
         inventory(lightsaber),
         write('Hello my apprentice everything is in place for us to go to Dromundkas.'), nl,
-        write('Leave the academy and meet me at the spaceship.') , nl, !.
+        write('Leave the academy and meet me at the spaceship.') , nl, 
+        assert(inventory(exit_key)),!.
 
 dialogue(zash) :-
         inventory(lightsaber_hilt),
@@ -291,11 +309,18 @@ dialogue(zash) :-
         assert(inventory(kyber_crystal)),nl,
         dialogue(zash).
 
+dialogue(zash) :-
+        write('Ah there you are my new apprentice. First things first let me tell you what happens now'), nl,
+        write('You will construct your own lightsaber and after that we will go to Dromundkas where we will start your training'), nl, nl,
+        write('Here I will give you a letter with which you should be able to get a light saber hilt.'), nl,
+        write('How? Easy: Find it out yourself this is your last test to truly become my apprentice.'), nl,
+        write('Once you have the Saber Hilt come back and talk to me, I will then tell you what to do next.'), nl,
+        assert(inventory(zash_letter)).
 dialogue(acolyte) :-
         inventory(sith_artifact),
         write('I see you have quite the interesting artifact on you.'),nl,
         write('I''d trade you it for a light saber hilt, heard you need one for lord Zash'), nl,
-        write('You interested?'),
+        write('You interested?'), nl,
         write('*you trade the artifact for the hilt*'), nl,
         write('Ight thanks for the trade, was definetly worth it for both of us.'), nl,
         retract(inventory(sith_artifact)),
@@ -326,11 +351,12 @@ dialogue(warden) :-
 
 dialogue(instructor) :-
         inventory(sith_holocron),
-        write('Ah good you have came! your lessons with the holocron yes?'), nl,
+        write('Ah good you have come! Your lessons with the holocron have finished, yes?'), nl,
         write('Then now you are ready to go to Lord Zash here take this key for her chambers.'), nl,
         write('*Your instructor takes the holocron back and gives you the key to Lord Zash''s chambers*'), nl,
         retract(inventory(sith_holocron)),
-        assert(inventory(chamber_key)).
+        assert(inventory(chamber_key)),
+        assert(unlocked(sith_lord_chambers)).
 
 describe(mainhall) :- 
         write('You are in the mainhall of the Sith Academy.'), nl,
@@ -356,7 +382,8 @@ describe(westcorridor) :-
 describe(eastcorridor) :- 
         write('You are in the Eastcorridor.'), nl,
         write('East is Lord Zash chambers'), nl,
-        write('West is the Mainhall.'), nl.
+        write('West is the Mainhall.'), nl,
+        write('South is the intructors room'), nl.
 describe(bedchamber) :- 
         write('You are in the Sith Bedchambers, here you and your peers sleep.'), nl,
         write('On the right you see your messy bed.'), nl,
