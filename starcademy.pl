@@ -1,6 +1,6 @@
 /* Starcademy, by Elias Pühringer and Ali Coban. */
 
-:- dynamic i_am_at/1, at/2, inventory/1, is_open/1. unlocked/1.
+:- dynamic i_am_at/1, at/2, inventory/1, is_open/1, unlocked/1, dead/1, has/2.
 :- retractall(at(_, _)), retractall(i_am_at(_)), retractall(is_open(_)), retractall(unlocked(_)).
 
 map :-
@@ -12,7 +12,7 @@ map :-
         write('| [W  Corridor] == [ Mainhall  ] == [E  Corridor] == [Sith Chamber] |'), nl,
         write('|     |  |             |  |             |  |                        |'), nl,
         write('| [Prison Ward]    [   Exit    ]    [Instructors]                   |'), nl,
-        write('-------------------------------------------------------------------'), nl.
+        write('---------------------------------------------------------------------'), nl.
 
 i_am_at(bedchamber).
 
@@ -69,6 +69,8 @@ at(warden, prison_ward).
 at(acolyte, bedchamber).
 at(instructor, instructorroom).
 
+has(zash_letter, zash).
+
 inv :- 
         findall(Is_In, inventory(Is_In), Entire),
         write(Entire), nl.
@@ -124,19 +126,6 @@ take(_) :-
 
 
 /* These rules describe how to put down an object. */
-
-drop(X) :-
-        inventory(X),
-        i_am_at(Place),
-        retract(inventory(X)),
-        assert(at(X, Place)),
-        write('OK.'),
-        !, nl.
-
-drop(_) :-
-        write('You aren''t carrying this currently!'),
-        nl.
-
 
 /* These rules define the direction letters as calls to go/1. */
 
@@ -198,8 +187,79 @@ use(altar) :-
         retract(inventory(kyber_crystal)), 
         assert(inventory(lightsaber)), !.
 
+use(altar) :-
+        write('You can''t use that yet.'), nl, !.
+
 use(_) :-
         write('You can''t use that').
+
+kill(zash) :-
+        write('Zash doesn''t even bat an eye as she cuts your head off in one swift swoop.'), nl, !, die.
+kill(instructor) :-
+        i_am_at(Place),
+        at(instructor, Place),
+        inventory(lightsaber),
+        write('You close into your instructor as he slowly understands his fate.'), nl,
+        write('He tries defending himself with his own Lightsaber but he is easily defeated by you.'), nl,
+        write('You take his lightsaber for you.'), nl,
+        retract(at(instructor, instructorroom)),
+        assert(dead(instructor)),
+        assert(inventory(instructors_lightsaber)), !.
+kill(instructor) :-
+        i_am_at(Place),
+        at(instructor, Place),
+        write('As you desperatly try to kill you instructor he strike you down with his lightsaber.'), nl,
+        write('Should''nt have tried attacking him without a weapon'), nl, !, die.
+kill(warden) :-
+        i_am_at(Place),
+        at(warden, Place),
+        write('No matter what you try you can''t overpower the Warden. But he doesn''t kill you all he says is:'), nl,
+        write('"Don''t even try it you never stand a chance against me"'), nl, !.
+kill(acolyte) :-
+        i_am_at(Place),
+        at(acolyte, Place),
+        inventory(lightsaber_hilt),
+        write('Not even a weapon is needed to kill this weak acolyte, and since he already did his purpose you take the sith artifact back from him'), nl, 
+        retract(at(acolyte, bedchamber)),
+        assert(dead(acolyte)),
+        assert(inventory(sith_artifact)), !.
+kill(acolyte) :-
+        i_am_at(Place),
+        at(acolyte, Place),
+        inventory(sith_artifact),
+        write('You ponder wether to kill the acolyte or trade for the weapon hilt you can see on his person.'), nl,
+        write('But after thinking about it for one more second you just kill him and take the hilt'), nl,
+        retract(at(acolyte, bedchamber)),
+        assert(dead(acolyte)),
+        assert(inventory(lightsaber_hilt)), !.
+kill(acolyte) :-
+        i_am_at(Place),
+        at(acolyte, Place),
+        write('You kill the annyoing acolyte in the bedchamber and find a lightsaber hilt on his body that now is your own.'), nl,
+        retract(at(acolyte, bedchamber)),
+        assert(dead(acolyte)),
+        assert(inventory(lightsaber_hilt)), !.
+
+kill(_) :-
+        write('You can''t do that.'), nl, !.
+
+curse(X) :-
+        inventory(sith_artifact),
+        npc(X),
+        write('NaN'),
+        !.
+
+
+
+read_l(sith_artifact) :- 
+        write('There is ancient writing on this artifact that you can not decipher.'), nl, !.
+
+read_l(sith_holocron) :-
+        write('You open the holocron with the force and learn about the dark ways.'), nl,
+        write('But you already studied this so why open it again, bring it back to the instructor.'), nl, !.
+
+read_l(altar) :-
+        write('The writing and depictions on this altar would implie that a lot of people died constructing it.'), nl, !.
 
 read_l(zash_letter) :-
         inventory(zash_letter),
@@ -211,6 +271,7 @@ read_l(_) :-
         write('You don''t see anything readable here'), nl.
 
 notice_npcs_at(bedchamber) :-
+        at(acolyte, bedchamber),
         write('You can see another acolyte here. Maybe you can talk to them.'), nl, nl, !.
 
 
@@ -265,15 +326,15 @@ instructions :-
         write('start.             -- to start the game.'), nl,
         write('n.  s.  e.  w.     -- to go in that direction.'), nl,
         write('take(Object).      -- to pick up an object.'), nl,
-        write('drop(Object).      -- to put down an object.'), nl,
         write('look.              -- to look around you again.'), nl,
         write('instructions.      -- to see this message again.'), nl,
         write('halt.              -- to end the game and quit.'), nl,
         write('inv.               -- to output your inventory'), nl,
         write('talk(NPC).         -- to talk to the npc in the room'), nl,
         write('use(X).            -- to use a construct'), nl,
-        write('read_l(X).           -- to read out text on a item'), nl,
+        write('read_l(X).         -- to read out text on a item/object'), nl,
         write('map.               -- to show the map of the academy'), nl,
+        write('kill.              -- to try and kill a npc'), nl,
         nl.
 
 
@@ -282,11 +343,39 @@ instructions :-
 start :-
         instructions,
         write('You wake up in your bed for another day in this accursed Academy.'), nl,
-        write('First things first you should bring the holocron with which you studied back to the library.'), nl.
+        write('First things first you should bring the holocron with which you studied back to your instructor.'), nl.
 
 
 /* These rules describe the various rooms.  Depending on
    circumstances, a room may have more than one description. */
+
+dialogue(zash) :-
+        inventory(lightsaber_hilt),
+        has(zash_letter, zash),
+        write('Ah there you are my new apprentice. First things first let me tell you what happens now'), nl,
+        write('You will construct your own lightsaber and after that we will go to Dromundkas where we will start your training'), nl, nl,
+        write('Here I will give you a letter with which you should be able to get a light saber hilt.'), nl,
+        write('Oh? You already have one splendid! Then I can just give the bled kyber crystal'), nl,
+        write('Here it is.'), nl, 
+        retract(has(zash_letter, zash)),
+        assert(inventory(kyber_crystal)), nl, !.
+
+dialogue(zash) :-
+        inventory(lightsaber_hilt),
+        write('Good Job aquiring that lightsaber hilt, now all that remains is a bled kyber crystal for finish.'), nl,
+        write('Here is one for now, later you will make you own.'), nl, nl,
+        write('*Zash gave you a bled kyber crystal*'),
+        assert(inventory(kyber_crystal)), nl, !.
+dialogue(zash) :-
+        inventory(lightsaber),
+        write('Hello my apprentice everything is in place for us to go to Dromundkas.'), nl,
+        write('Leave the academy and meet me at the spaceship.') , nl, 
+        assert(inventory(exit_key)),!.
+
+dialogue(zash) :-
+        inventory(sith_artifact),
+        write('I see you went to the warden with the letter.'), nl,
+        write('Good Job but you still haven''t returned with the lightsaber hilt. Now go.'), nl, !.
 
 dialogue(zash) :- 
         inventory(lightsaber_hilt),
@@ -296,26 +385,13 @@ dialogue(zash) :-
         write('Now create your weapon and we can go to Dromundkas'), nl, !.
 
 dialogue(zash) :-
-        inventory(lightsaber),
-        write('Hello my apprentice everything is in place for us to go to Dromundkas.'), nl,
-        write('Leave the academy and meet me at the spaceship.') , nl, 
-        assert(inventory(exit_key)),!.
-
-dialogue(zash) :-
-        inventory(lightsaber_hilt),
-        write('Good Job aquiring that lightsaber hilt, now all that remains is a bled kyber crystal for finish.'), nl,
-        write('Here is one for now, later you will make you own.'), nl, nl,
-        write('*Zash gave you a bled kyber crystal*'),
-        assert(inventory(kyber_crystal)),nl,
-        dialogue(zash).
-
-dialogue(zash) :-
         write('Ah there you are my new apprentice. First things first let me tell you what happens now'), nl,
         write('You will construct your own lightsaber and after that we will go to Dromundkas where we will start your training'), nl, nl,
         write('Here I will give you a letter with which you should be able to get a light saber hilt.'), nl,
         write('How? Easy: Find it out yourself this is your last test to truly become my apprentice.'), nl,
         write('Once you have the Saber Hilt come back and talk to me, I will then tell you what to do next.'), nl,
-        assert(inventory(zash_letter)).
+        retract(has(zash_letter, zash)),
+        assert(inventory(zash_letter)), !.
 dialogue(acolyte) :-
         inventory(sith_artifact),
         write('I see you have quite the interesting artifact on you.'),nl,
@@ -356,7 +432,16 @@ dialogue(instructor) :-
         write('*Your instructor takes the holocron back and gives you the key to Lord Zash''s chambers*'), nl,
         retract(inventory(sith_holocron)),
         assert(inventory(chamber_key)),
-        assert(unlocked(sith_lord_chambers)).
+        assert(unlocked(sith_lord_chambers)), !.
+
+dialogue(instructor) :-
+        inventory(chamber_key),
+        write('Now go I am no longer your instructr'), nl, !.
+
+dialogue(instructor) :-
+        write('Incompetent Swine, you forgot the sith holocron. I told you I tolerate no mistakes.'), nl,
+        write('Now you shall die.'), nl,
+        die.
 
 describe(mainhall) :- 
         write('You are in the mainhall of the Sith Academy.'), nl,
@@ -398,9 +483,9 @@ describe(sith_lord_chambers) :-
 describe(exit) :-
         inventory(exit_key),
         write('In front of you are huge open medal doors.'), nl,
-        write('You are now ready to go to Dromundkas'), nl.
+        write('You are now ready to go to Dromundkas'), nl, !.
 describe(exit) :-
-        write('In front of you are huge medal doors sealed shut by the sith council'), nl, !.
+        write('In front of you are huge metal doors sealed shut by the sith council'), nl, !.
 describe(void) :-
         write('After death you just find yourself on a endless dark plane.'), nl.
 describe(prison_ward) :-
