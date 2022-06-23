@@ -1,5 +1,4 @@
 # Starcademy (Sith Academy on Korriban)
-![img](../pictures/logo_sithempire.png)  
 ## Map
 ![img](../pictures/map.png)  
 
