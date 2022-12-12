@@ -1,3 +1,6 @@
+# Disclaimer
+This is no longer in Development and is serverely bugged and doesn't work and will never work. If you want it to work you will have to do that yourself and if you want you can make a pull request to fix it.  
+  
 # A small text adventure game made with prolog
 ## Starcademy - A Star Wars based Text Adventure
 ## What is this game about?
